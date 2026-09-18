@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Shopify -> QuickBooks Online order sync with bundle decomposition",
+  "license": "MIT",
   "type": "commonjs",
   "engines": {
     "node": ">=20"

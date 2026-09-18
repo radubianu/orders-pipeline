@@ -156,3 +156,7 @@ flyctl machine update <worker-machine-id> --restart no
 
 Without this, Fly could restart the worker after a normal empty-queue exit,
 defeating the "only the web process wakes it" design.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
