@@ -1,0 +1,46 @@
+app = "orders-pipeline-demo"
+primary_region = "fra"
+
+[build]
+
+[processes]
+  web = "node dist/src/server.js"
+  worker = "node dist/src/worker.js"
+
+# Runs migrations once per deploy, before new Machines take traffic.
+[deploy]
+  release_command = "node dist/scripts/migrate.js"
+
+# Scoped to the `web` process only. min_machines_running = 1 keeps it
+# always-on -- Shopify's 5-second webhook timeout doesn't leave a safe
+# margin against Fly's cold-start latency (~2-8s for a stopped Machine),
+# so scale-to-zero is deliberately NOT used here.
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["web"]
+
+# No [http_service]/[[services]] block for `worker` -- its lifecycle is
+# managed entirely by the web process's Fly Machines API wake call
+# (src/lib/flyMachines.ts) and its own self-exit logic (src/worker.ts),
+# not by Fly's proxy.
+
+[[vm]]
+  size = "shared-cpu-1x"
+  processes = ["web"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  processes = ["worker"]
+
+# fly.toml has no field that actually pins a Machine's restart policy (a
+# `restart.policy` key under [[vm]] validates but is silently ignored by
+# flyctl -- confirmed empirically). Every full `flyctl deploy` resets the
+# worker Machine to Fly's default ("on-failure", max_retries 10), so this
+# must be re-applied after each deploy that touches the worker:
+#   flyctl machine update <worker-machine-id> --restart no
+# Without it, only the web process's Machines API "start" call should ever
+# bring the worker back after its clean process.exit(0).
